@@ -16,11 +16,13 @@ if ST3:
     from . import prompt
     from .show import show
     from .jumping import jump_names
+    from .file_browser_state import get_marked_files, set_marked_files
 else:  # ST2 imports
     from common import DiredBaseCommand, print, set_proper_scheme, calc_width, get_group, hijack_window, emit_event, NT, PARENT_SYM
     import prompt
     from show import show
     from jumping import jump_names
+    from file_browser_state import get_marked_files, set_marked_files
 
 
 def reuse_view():
