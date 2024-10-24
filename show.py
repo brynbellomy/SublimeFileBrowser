@@ -68,12 +68,14 @@ def show(window, path, view_id=None, ignore_existing=False, single_pane=False, g
     """
     Determines the correct view to use, creating one if necessary, and prepares it.
     """
+    print('SHOWWWWWW')
     if other_group:
         prev_focus = window.active_view()
         # simulate 'toggle sidebar':
         if prev_focus and 'dired' in prev_focus.scope_name(0):
             window.run_command('close_file')
-            return
+            print('AAAAAAAAA')
+            return prev_focus
 
     if not path.endswith(os.sep):
         path += os.sep
@@ -104,3 +106,5 @@ def show(window, path, view_id=None, ignore_existing=False, single_pane=False, g
     view.run_command('dired_refresh', {'goto': goto, 'reset_sels': reset_sels})
     window.run_command('hide_overlay')
     window.focus_view(view)
+    print('BBBBBBBB')
+    return view

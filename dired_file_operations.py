@@ -94,9 +94,22 @@ class DiredCreateAndOpenCommand(DiredCreateCommand):
             dired_view.settings().set('dired_path', fqn + os.sep)
         else:
             sublime.active_window().open_file(fqn)
+            self.set_custom_layout()
+            new_view = sublime.active_window().open_file(fqn)
+            sublime.active_window().set_view_index(new_view, 0, 0)  # Move to top-left group
         if self.refresh:
             emit_event(u'watch_view', dired_view.id(), plugin=u'FileBrowserWFS')
             dired_view.run_command('dired_refresh', {'goto': fqn})
+
+    def set_custom_layout(self):
+        window = sublime.active_window()
+        layout = window.get_layout()
+        if layout['cols'] != [0.0, 0.8, 1.0] or layout['rows'] != [0.0, 0.75, 1.0]:
+            window.set_layout({
+                "cols": [0.0, 0.8, 1.0],
+                "rows": [0.0, 0.75, 1.0],
+                "cells": [[0, 0, 1, 1], [0, 1, 1, 2], [1, 0, 2, 2]]
+            })
 
 
 class DiredDeleteCommand(TextCommand, DiredBaseCommand):

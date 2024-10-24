@@ -2,12 +2,14 @@
 
 '''Main module; launch and navigation related stuff'''
 
+
 from __future__ import print_function
 import sublime
 from sublime import Region
 from sublime_plugin import WindowCommand, TextCommand
 import os
 from os.path import basename, dirname, isdir, exists, join
+from .project_data import ProjectDataManager
 
 ST3 = int(sublime.version()) >= 3000
 
@@ -16,13 +18,12 @@ if ST3:
     from . import prompt
     from .show import show
     from .jumping import jump_names
-    from .file_browser_state import get_marked_files, set_marked_files
+
 else:  # ST2 imports
     from common import DiredBaseCommand, print, set_proper_scheme, calc_width, get_group, hijack_window, emit_event, NT, PARENT_SYM
     import prompt
     from show import show
     from jumping import jump_names
-    from file_browser_state import get_marked_files, set_marked_files
 
 
 def reuse_view():
@@ -85,6 +86,7 @@ class DiredCommand(WindowCommand, DiredBaseCommand):
     Prompt for a directory to display and display it.
     """
     def run(self, immediate=False, single_pane=False, project=False, other_group=False):
+        # self.set_custom_layout()
         path, goto = self._determine_path()
         if project:
             folders = self.window.folders()
@@ -100,17 +102,33 @@ class DiredCommand(WindowCommand, DiredBaseCommand):
                 self.window.show_quick_panel(names, lambda i: self._show_folder(i, path, goto, single_pane, other_group), sublime.MONOSPACE_FONT)
                 return
         if immediate:
-            show(self.window, path, goto=goto, single_pane=single_pane, other_group=other_group)
+            # show(self.window, path, goto=goto, single_pane=single_pane, other_group=other_group)
+            self.show_in_right_group(path, goto)
         else:
             prompt.start('Directory:', self.window, path, self._show)
+
+    # def set_custom_layout(self):
+    #     layout = self.window.get_layout()
+    #     if layout['cols'] != [0.0, 0.8, 1.0] or layout['rows'] != [0.0, 0.75, 1.0]:
+    #         self.window.set_layout({
+    #             "cols": [0.0, 0.8, 1.0],
+    #             "rows": [0.0, 0.75, 1.0],
+    #             "cells": [[0, 0, 1, 1], [0, 1, 1, 2], [1, 0, 2, 2]]
+    #         })
+
+    def show_in_right_group(self, path, goto):
+        view = show(self.window, path, goto=goto, single_pane=True)
+        self.window.set_view_index(view, 2, 0)  # Move to right column (group 2)
 
     def _show_folder(self, index, path, goto, single_pane, other_group):
         if index != -1:
             choice = self.window.folders()[index]
             if path == choice:
-                show(self.window, path, goto=goto, single_pane=single_pane, other_group=other_group)
+                # show(self.window, path, goto=goto, single_pane=single_pane, other_group=other_group)
+                self.show_in_right_group(path, goto)
             else:
-                show(self.window, choice, single_pane=single_pane, other_group=other_group)
+                # show(self.window, choice, single_pane=single_pane, other_group=other_group)
+                self.show_in_right_group(path, None)
 
     def _show(self, path):
         show(self.window, path)
@@ -393,6 +411,17 @@ class DiredMoveCommand(TextCommand, DiredBaseCommand):
 
 class DiredSelect(TextCommand, DiredBaseCommand):
     '''Common command for opening file/directory in existing view'''
+
+    # def set_custom_layout(self):
+    #     layout = self.view.window().get_layout()
+    #     if layout['cols'] != [0.0, 0.8, 1.0] or layout['rows'] != [0.0, 0.75, 1.0]:
+    #         self.view.window().set_layout({
+    #             "cols": [0.0, 0.8, 1.0],
+    #             "rows": [0.0, 0.75, 1.0],
+    #             "cells": [[0, 0, 1, 1], [0, 1, 1, 2], [1, 0, 2, 2]]
+    #         })
+
+
     def run(self, edit, new_view=0, other_group=0, and_close=0):
         '''
         new_view     if True, open directory in new view, rather than existing one
@@ -404,12 +433,13 @@ class DiredSelect(TextCommand, DiredBaseCommand):
                      self.get_marked(full=True) or self.get_selected(full=True))
 
         window = self.view.window()
+        # self.set_custom_layout()
         if self.goto_directory(filenames, window, new_view):
             return
 
         dired_view = self.view
-        if other_group:
-            self.focus_other_group(window)
+        # if other_group:
+        #     self.focus_other_group(window)
 
         self.last_created_view = None
         for fqn in filenames:
@@ -436,9 +466,18 @@ class DiredSelect(TextCommand, DiredBaseCommand):
 
     def open_item(self, fqn, window, new_view):
         if isdir(fqn):
-            show(window, fqn, ignore_existing=new_view)
+            # show(window, fqn, ignore_existing=new_view)
+            new_view = show(window, fqn, ignore_existing=new_view)
+            if new_view:
+                window.focus_view(new_view)
         elif exists(fqn):  # ignore 'item <error>'
+            # self.last_created_view = window.open_file(fqn)
+            # self.set_custom_layout()
+            active_main_view = window.active_view_in_group(0)
+            _, active_view_index = window.get_view_index(active_main_view)
             self.last_created_view = window.open_file(fqn)
+            window.set_view_index(self.last_created_view, 0, active_view_index + 1)
+            window.focus_view(self.last_created_view)
         else:
             sublime.status_message(u'File does not exist (%s)' % (basename(fqn.rstrip(os.sep)) or fqn))
 
@@ -758,7 +797,7 @@ class DiredMarkExtensionCommand(TextCommand, DiredBaseCommand):
                    regions=[self.fileregion()])
 
 
-class DiredMarkCommand(TextCommand, DiredBaseCommand):
+class DiredMarkCommand(TextCommand, DiredBaseCommand, ProjectDataManager):
     """
     Marks or unmarks files.
 
@@ -771,6 +810,11 @@ class DiredMarkCommand(TextCommand, DiredBaseCommand):
     If there is no selection and mark is '*', the cursor is moved to the next line so
     successive files can be marked by repeating the mark key binding (e.g. 'm').
     """
+    def __init__(self, view):
+        TextCommand.__init__(self, view)
+        DiredBaseCommand.__init__(self)
+        ProjectDataManager.__init__(self, view)
+
     def run(self, edit, mark=True, markall=False, forward=True):
         assert mark in (True, False, 'toggle')
 
@@ -789,6 +833,8 @@ class DiredMarkCommand(TextCommand, DiredBaseCommand):
             mark = lambda oldmark, filename: not oldmark
 
         self._mark(mark=mark, regions=regions)
+        with self.project_data_context() as data:
+            data['file_browser']['marked_files'] = self.get_marked(full=True)
 
         # If there is no selection, move the cursor forward so the user can keep pressing 'm'
         # to mark successive files.

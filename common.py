@@ -7,7 +7,7 @@ import re, os, fnmatch, sys, itertools
 import sublime
 from sublime import Region
 from os.path import isdir, join, basename
-from .file_browser_state import get_marked_files, set_marked_files
+# from .file_browser_state import get_marked_files, set_marked_files
 
 try:  # unavailable dependencies shall not break basic functionality
     import package_events
@@ -364,7 +364,8 @@ class DiredBaseCommand:
         else:
             self.view.erase_regions('marked')
 
-        set_marked_files(self.view.window(), self.get_marked(full=True))
+        print("SET MARKED FILES 1", self.view.window())
+        # set_marked_files(self.view.window(), self.get_marked(full=True))
 
     def _get_lines(self, regions, within):
         '''

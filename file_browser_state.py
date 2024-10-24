@@ -1,19 +1,42 @@
-import sublime
+# import sublime
+# import os
+# from .project_data import ProjectDataManager
 
-class FileBrowserState:
-    def __init__(self):
-        self.marked_files = {}
+# def plugin_loaded():
+#     state = FileBrowserState(sublime.active_window())
+#     state.set_marked_files(sublime.active_window(), [])
 
-    def set_marked_files(self, window_id, files):
-        self.marked_files[window_id] = files
+# class FileBrowserState(ProjectDataManager):
+#     def __init__(self, view):
+#         ProjectDataManager.__init__(self, view)
+#         self.marked_files = {}
 
-    def get_marked_files(self, window_id):
-        return self.marked_files.get(window_id, [])
+#     def set_marked_files(self, files):
+#         print('SET MARKED FILES', files)
+#         with self.project_data_context() as project_data:
+#             window_id = self.view.window().id()
+#             self.marked_files[window_id] = files
 
-file_browser_state = FileBrowserState()
+#             # Save marked files to project data
+#             project_data = self.view.window().project_data()
+#             if project_data is None:
+#                 project_data = {}
 
-def get_marked_files(window):
-    return file_browser_state.get_marked_files(window.id())
+#             project_data['file_browser']['marked_files'] = files or []
 
-def set_marked_files(window, files):
-    file_browser_state.set_marked_files(window.id(), files)
+#     def get_marked_files(self, window_id):
+#         # First, try to get marked files from memory
+#         print('GET MARKED FILES')
+#         files = self.marked_files.get(window_id, [])
+
+#         # If not found in memory, try to get from project data
+#         if not files:
+#             window = sublime.active_window()
+#             project_data = window.project_data()
+#             if project_data and 'file_browser_marked_files' in project_data:
+#                 files = project_data['file_browser_marked_files']
+#                 self.marked_files[window_id] = files  # Cache in memory
+
+#         return files
+
+
